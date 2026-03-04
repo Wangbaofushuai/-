@@ -104,10 +104,19 @@ export default function App() {
             <li>自动将 <code className="bg-blue-100 px-1 rounded">{`{ 注释 }`}</code> 转换为 <code className="bg-blue-100 px-1 rounded">{`// 注释`}</code>。</li>
             <li>自动将 <code className="bg-blue-100 px-1 rounded">HV()</code> 转换为 <code className="bg-blue-100 px-1 rounded">HHV()</code>，<code className="bg-blue-100 px-1 rounded">LV()</code> 转换为 <code className="bg-blue-100 px-1 rounded">LLV()</code>。</li>
             <li>自动将 <code className="bg-blue-100 px-1 rounded">IFELSE()</code> 转换为 <code className="bg-blue-100 px-1 rounded">IF()</code>。</li>
+            <li>自动将 <code className="bg-blue-100 px-1 rounded">VALUEWHEN(条件, 数据)</code> 转换为同花顺支持的 <code className="bg-blue-100 px-1 rounded">REF(数据, BARSLAST(条件))</code> 语法。</li>
             <li>自动将 <code className="bg-blue-100 px-1 rounded">CROSSUP()</code> 转换为 <code className="bg-blue-100 px-1 rounded">CROSS()</code>，<code className="bg-blue-100 px-1 rounded">CROSSDOWN(A,B)</code> 转换为 <code className="bg-blue-100 px-1 rounded">CROSS(B,A)</code>。</li>
-            <li>自动注释掉同花顺不支持的声音函数 <code className="bg-blue-100 px-1 rounded">COND, SOUND('A');</code> 以防止编译报错（缺少分号）。</li>
+            <li>自动将 <code className="bg-blue-100 px-1 rounded">GETPRICE('YCLOSE')</code> 等获取盘口数据的函数转换为同花顺的 <code className="bg-blue-100 px-1 rounded">DYNAINFO()</code> 函数（如 <code className="bg-blue-100 px-1 rounded">DYNAINFO(3)</code> 代表昨收）。</li>
+            <li>自动将 <code className="bg-blue-100 px-1 rounded">DRAWCOLORLINE</code> 转换为同花顺支持的 <code className="bg-blue-100 px-1 rounded">IF(..., DRAWNULL)</code> 分段画线语法。</li>
+            <li>自动将 <code className="bg-blue-100 px-1 rounded">DRAWCOLORKLINE</code> 转换为同花顺支持的 <code className="bg-blue-100 px-1 rounded">STICKLINE</code> 语法。</li>
+            <li>自动将 <code className="bg-blue-100 px-1 rounded">KTEXT</code> 转换为同花顺的 <code className="bg-blue-100 px-1 rounded">DRAWTEXT</code> 语法。</li>
+            <li><strong>智能转换（DRAWICON）：</strong> 自动将文华的图标编号映射为同花顺编号（如文华 1号笑脸 自动转为同花顺 7号笑脸），并在代码后添加注释提示。</li>
+            <li><strong>智能转换（STICKLINE）：</strong> 自动放大 <code className="bg-blue-100 px-1 rounded">STICKLINE</code> 的宽度参数（如 3 放大为 6，5 放大为 8），以解决同花顺中柱子过细的问题。</li>
+            <li><strong>智能转换（DRAWTEXT）：</strong> 自动去除多余的偏移量参数，并在代码后添加注释，提示如何微调重叠文字的位置。</li>
+            <li>自动去除 <code className="bg-blue-100 px-1 rounded">DRAWNUMBER</code> 中多余的精度参数，并去除 <code className="bg-blue-100 px-1 rounded">FONTSIZE</code>, <code className="bg-blue-100 px-1 rounded">ALIGN</code> 等同花顺不支持的后缀修饰符。</li>
+            <li>自动将 <code className="bg-blue-100 px-1 rounded">NULL</code> 常量转换为 <code className="bg-blue-100 px-1 rounded">DRAWNULL</code>。</li>
+            <li>自动注释掉同花顺不支持的声音函数 <code className="bg-blue-100 px-1 rounded">COND, SOUND('A');</code> 和画斜线函数 <code className="bg-blue-100 px-1 rounded">DRAWSL</code> 以防止编译报错。</li>
             <li>自动注释掉同花顺不支持的 <code className="bg-blue-100 px-1 rounded">AUTOFILTER;</code> 指令。</li>
-            <li>自动去除 <code className="bg-blue-100 px-1 rounded">DRAWTEXT</code> 和 <code className="bg-blue-100 px-1 rounded">DRAWICON</code> 中多余的第 4 个参数（偏移量），以适配同花顺的 3 参数格式。</li>
             <li>自动转换逻辑运算符：<code className="bg-blue-100 px-1 rounded">&amp;&amp;</code> 转换为 <code className="bg-blue-100 px-1 rounded">AND</code>，<code className="bg-blue-100 px-1 rounded">||</code> 转换为 <code className="bg-blue-100 px-1 rounded">OR</code>，<code className="bg-blue-100 px-1 rounded">!=</code> 转换为 <code className="bg-blue-100 px-1 rounded">&lt;&gt;</code>。</li>
             <li>自动转换颜色常量，如 <code className="bg-blue-100 px-1 rounded">COLORRED</code> 转换为 <code className="bg-blue-100 px-1 rounded">colorred</code>。</li>
             <li><strong>注意：</strong> 转换工具可以处理大部分常见语法差异，但某些复杂的自定义函数或特定画线函数可能需要手动微调。请在同花顺中测试编译结果。</li>
