@@ -1,0 +1,38 @@
+ {N: RSI计算周期，默认为14}N:=14;
+{LB_L: 左侧回溯K线数}LB_L:=8;
+{LB_R: 右侧回溯K线数}LB_R:=1;
+{RANGE_UPPER: 背离检测最大范围}RANGE_UPPER:=60;
+{RANGE_LOWER: 背离检测最小范围}RANGE_LOWER:=5;
+{--------------------- 基础计算 ---------------------}{RSI计算}
+LC := REF(CLOSE,1);
+RSI1:=SMA(MAX(CLOSE-LC,0),N,1)/SMA(ABS(CLOSE-LC),N,1)*100;
+RSI值:=RSI1;
+{--------------------- 多头背离检测 -----------------}{RSI谷值点检测}
+谷值条件:=TROUGH(RSI值,LB_L,LB_R,1)=RSI值;
+{价格创新低}价格新低:=LOW=LLV(LOW,LB_L+LB_R);
+{RSI未创新低（更高低点）}前次谷值位置:=BARSLAST(谷值条件);
+前次RSI谷值:=REF(RSI值,前次谷值位置);
+RSI更高低点:=RSI值>前次RSI谷值 AND 价格新低;
+{有效范围内}范围有效:=前次谷值位置>=RANGE_LOWER AND 前次谷值位置<=RANGE_UPPER;
+{多头背离信号}多头背离:=谷值条件 AND RSI更高低点 AND 范围有效;
+{--------------------- 空头背离检测 -----------------}{RSI峰值点检测}峰值条件:=PEAK(RSI值,LB_L,LB_R,1)=RSI值;
+{价格创新高}价格新高:=HIGH=HHV(HIGH,LB_L+LB_R);
+{RSI未创新高（更低高点）}前次峰值位置:=BARSLAST(峰值条件);
+前次RSI峰值:=REF(RSI值,前次峰值位置);
+RSI更低高点:=RSI值<前次RSI峰值 AND 价格新高;
+{有效范围内}范围有效2:=前次峰值位置>=RANGE_LOWER AND 前次峰值位置<=RANGE_UPPER;
+{空头背离信号}空头背离:=峰值条件 AND RSI更低高点 AND 范围有效2;
+//{--------------------- 信号标记 ---------------------}{多头背离：绿色向上箭头}
+DRAWICON(多头背离,RSI值,1),COLORGREEN;
+//{空头背离：红色向下箭头}
+DRAWICON(空头背离,RSI值,2),COLORRED;
+//{--------------------- 背景填充 ---------------------}{正确使用DRAWBAND：4个参数}{当RSI值>70时填充绿色，RSI值<30时填充红色}
+FILLRGN(RSI值>70,RSI值,70,RGB(0,255,0));
+FILLRGN(RSI值<=70,RSI值,70,RGB(255,0,0));
+FILLRGN(1,70,30,RGB(100,100,100));
+{--------------------- 输出显示 ---------------------}
+RSI值,COLORYELLOW,LINETHICK2;
+{超买超卖参考线}
+70,COLORBLUE,LINETHICK1,POINTDOT;
+30,COLORBLUE,LINETHICK1,POINTDOT;
+50,COLORWHITE,LINETHICK1;

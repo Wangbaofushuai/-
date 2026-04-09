@@ -9,13 +9,21 @@ export function convertWH6ToiFinD(wh6Code: string): string {
 
   // 0.1 Handle Comments
   code = code.replace(/\{([^}]*)\}/g, (match, p1) => {
-    if (p1.includes('\n')) {
-      return `/*${p1}*/`;
-    }
-    return `//${p1}`;
+    // Prevent nested block comments from breaking the syntax
+    const safeComment = p1.replace(/\*\//g, '* /');
+    return `/*${safeComment}*/`;
   });
 
   // 1. Replace Functions
+  
+  // Handle WH6 specific TROUGH/PEAK local pivot detection
+  // TROUGH(VAR, L, R, 1)=VAR  ->  Use BACKSET to avoid REFX parameter 1 error on custom variables
+  code = code.replace(/\bTROUGH\s*\(\s*([^,]+?)\s*,\s*([^,]+?)\s*,\s*([^,]+?)\s*,\s*1\s*\)\s*=\s*\1/gi, 
+    '(BACKSET(REF($1, $3) <= REF(LLV($1, $2), $3 + 1) AND REF($1, $3) <= LLV($1, $3), $3 + 1) = 1 AND REF(BACKSET(REF($1, $3) <= REF(LLV($1, $2), $3 + 1) AND REF($1, $3) <= LLV($1, $3), $3 + 1), 1) = 0) /* [波谷转换] 原TROUGH转为BACKSET未来检测 */');
+
+  code = code.replace(/\bPEAK\s*\(\s*([^,]+?)\s*,\s*([^,]+?)\s*,\s*([^,]+?)\s*,\s*1\s*\)\s*=\s*\1/gi, 
+    '(BACKSET(REF($1, $3) >= REF(HHV($1, $2), $3 + 1) AND REF($1, $3) >= HHV($1, $3), $3 + 1) = 1 AND REF(BACKSET(REF($1, $3) >= REF(HHV($1, $2), $3 + 1) AND REF($1, $3) >= HHV($1, $3), $3 + 1), 1) = 0) /* [波峰转换] 原PEAK转为BACKSET未来检测 */');
+
   code = code.replace(/\bHV\s*\(/gi, 'HHV(');
   code = code.replace(/\bLV\s*\(/gi, 'LLV(');
   code = code.replace(/\bIFELSE\s*\(/gi, 'IF(');
@@ -44,6 +52,11 @@ export function convertWH6ToiFinD(wh6Code: string): string {
   // Replace UNIT with 1 (TonghuaShun lacks a universal contract multiplier variable in this context, using 1 preserves the trend/shape)
   code = code.replace(/\bUNIT\b/gi, '1');
   
+  // Fix invalid variable names starting with numbers (e.g., 0000X)
+  // TonghuaShun does not allow variables to start with a number.
+  // We match word boundaries, then digits, then letters/underscores.
+  code = code.replace(/\b([0-9]+[a-zA-Z_][a-zA-Z0-9_]*)\b/g, 'VAR_$1');
+
   // Fix invalid variable names containing % (e.g., 比%, 资金1%)
   // Ensures it matches variables but not literal numbers like 100%
   code = code.replace(/([a-zA-Z0-9_]*[a-zA-Z\u4e00-\u9fa5][a-zA-Z0-9\u4e00-\u9fa5_]*)%/g, '$1率');
@@ -84,26 +97,9 @@ export function convertWH6ToiFinD(wh6Code: string): string {
 
   // 3. Handle Colors and Line Styles
   
-  // Convert top-level RGB(...) and COLORRGB(...) to COLOR+Hex
-  // In TonghuaShun, RGB(R,G,B) returns a number. If used as a line modifier at the top level, 
-  // it compresses the Y-axis. TonghuaShun doesn't support COLORRGB(R,G,B) either.
-  // It needs to be converted to a hex color like COLOR3D3D3D.
-  let linesForColor = code.split('\n');
-  for (let i = 0; i < linesForColor.length; i++) {
-      let line = linesForColor[i];
-      // Only process if it's not inside a function like DRAWGBK
-      if ((line.toUpperCase().includes('RGB(') || line.toUpperCase().includes('COLORRGB(')) && !line.toUpperCase().includes('DRAWGBK(')) {
-          line = line.replace(/(?:COLOR)?RGB\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/gi, (match, r, g, b) => {
-              const hexR = parseInt(r).toString(16).padStart(2, '0').toUpperCase();
-              const hexG = parseInt(g).toString(16).padStart(2, '0').toUpperCase();
-              const hexB = parseInt(b).toString(16).padStart(2, '0').toUpperCase();
-              return `COLOR${hexB}${hexG}${hexR}`; // TonghuaShun uses BGR format for hex colors
-          });
-          linesForColor[i] = line;
-      }
-  }
-  code = linesForColor.join('\n');
-
+  // Convert COLORRGB to RGB globally first, as TonghuaShun only supports RGB() for numeric color values
+  code = code.replace(/\bCOLORRGB\s*\(/gi, 'RGB(');
+  
   // Convert COLORXXX to colorxxx, but keep hex colors (e.g., COLOR3D3D3D) uppercase
   code = code.replace(/\bCOLOR([A-Z0-9]+)\b/gi, (match, p1) => {
       if (/^[0-9A-F]{6}$/i.test(p1)) {
@@ -114,6 +110,9 @@ export function convertWH6ToiFinD(wh6Code: string): string {
 
   // Replace line styles
   code = code.replace(/,\s*DOT\b/gi, ', DOTLINE');
+  code = code.replace(/,\s*DASHDOTDOT\b/gi, ', DOTLINE');
+  code = code.replace(/,\s*DASHDOT\b/gi, ', DOTLINE');
+  code = code.replace(/,\s*DASH\b/gi, ', DOTLINE');
 
   // Remove WH6 specific styling suffixes but leave a warning for alignment
   code = code.replace(/,\s*(FONTSIZE|ALIGN|VALIGN|PRECIS)(\d+)/gi, (match, p1, p2) => {
@@ -429,15 +428,24 @@ export function convertWH6ToiFinD(wh6Code: string): string {
 
   code = replaceFunction(code, 'DRAWTEXT', (args, suffix, hasSemi) => {
       if (args.length >= 3) {
-          let comment = args.length > 3 ? ' /* [位置提示] 原偏移量已去除，若文字重叠请微调价格参数(如 *1.01) */' : '';
-          return `DRAWTEXT(${args[0]}, ${args[1]}, ${args[2]})${suffix}${hasSemi ? ';' : ''}${comment}`;
+          let extraColor = '';
+          let comment = '';
+          if (args.length > 3) {
+              // If the 4th argument looks like a color or modifier, append it
+              if (/color|rgb|red|green|blue|yellow|white|black/i.test(args[3])) {
+                  extraColor = `, ${args[3]}`;
+              } else {
+                  comment = ' /* [位置提示] 原偏移量已去除，若文字重叠请微调价格参数(如 *1.01) */';
+              }
+          }
+          return `DRAWTEXT(${args[0]}, ${args[1]}, ${args[2]})${extraColor}${suffix}${hasSemi ? ';' : ''}${comment}`;
       }
       return null;
   });
 
   code = replaceFunction(code, 'DRAWICON', (args, suffix, hasSemi) => {
       if (args.length >= 3) {
-          let icon = args[2];
+          let icon = args[2].trim();
           let newIcon = icon;
           if (icon === '1') newIcon = '7';
           else if (icon === '2') newIcon = '8';
@@ -534,7 +542,32 @@ export function convertWH6ToiFinD(wh6Code: string): string {
                   comment = ` /* [线宽提示] 原宽度${width}已放大为${newWidth}以适配同花顺 */`;
               }
           }
-          return `STICKLINE(${args[0]}, ${args[1]}, ${args[2]}, ${newWidth}, ${args[4]})${suffix}${hasSemi ? ';' : ''}${comment}`;
+          let extraColor = args.length >= 6 ? `, ${args[5]}` : '';
+          return `STICKLINE(${args[0]}, ${args[1]}, ${args[2]}, ${newWidth}, ${args[4]})${extraColor}${suffix}${hasSemi ? ';' : ''}${comment}`;
+      }
+      return null;
+  });
+
+  code = replaceFunction(code, 'DRAWGBK', (args, suffix, hasSemi) => {
+      // WH6: DRAWGBK(COND, COLOR1, COLOR2, DIR)
+      // iFinD: DRAWGBK(COND, STRIP(COLOR1, COLOR2, DIR))
+      if (args.length >= 4) {
+          return `DRAWGBK(${args[0]}, STRIP(${args[1]}, ${args[2]}, ${args[3]}))${suffix}${hasSemi ? ';' : ''}`;
+      }
+      return null;
+  });
+
+  code = replaceFunction(code, 'FILLRGN', (args, suffix, hasSemi) => {
+      // WH6: FILLRGN(COND1, PRICE1, PRICE2, COLOR1, COND2, COLOR2...)
+      // TonghuaShun: FILLRGN(PRICE1, PRICE2, COND1, COLOR1, COND2, COLOR2...)
+      if (args.length >= 4) {
+          let newArgs = [args[1], args[2], args[0], args[3]];
+          for (let i = 4; i < args.length; i++) {
+              newArgs.push(args[i]);
+          }
+          return `FILLRGN(${newArgs.join(', ')})${suffix}${hasSemi ? ';' : ''}`;
+      } else if (args.length === 3) {
+          return `FILLRGN(${args[1]}, ${args[2]}, ${args[0]}, RGB(128,128,128))${suffix}${hasSemi ? ';' : ''} /* [颜色提示] 原函数缺颜色，已默认补为灰色 */`;
       }
       return null;
   });
@@ -661,6 +694,77 @@ export function convertWH6ToiFinD(wh6Code: string): string {
       }
   }
   code = lines.join('\n');
+
+  // 10. Convert top-level RGB(...) to COLOR+Hex
+  // In TonghuaShun, RGB(R,G,B) returns a number. If used as a line modifier at the top level, 
+  // it compresses the Y-axis. It needs to be converted to a hex color like COLOR3D3D3D.
+  let linesForColor = code.split('\n');
+  for (let i = 0; i < linesForColor.length; i++) {
+      let line = linesForColor[i];
+      let newLine = '';
+      let parenCount = 0;
+      let inSingle = false;
+      let inDouble = false;
+      let inBlockComment = false;
+      let inLineComment = false;
+      
+      let j = 0;
+      while (j < line.length) {
+          if (inBlockComment) {
+              if (line[j] === '*' && line[j+1] === '/') {
+                  inBlockComment = false;
+                  newLine += '*/';
+                  j += 2;
+                  continue;
+              }
+              newLine += line[j];
+              j++;
+              continue;
+          }
+          if (inLineComment) {
+              newLine += line[j];
+              j++;
+              continue;
+          }
+          if (line[j] === "'" && !inDouble) inSingle = !inSingle;
+          if (line[j] === '"' && !inSingle) inDouble = !inDouble;
+          let inString = inSingle || inDouble;
+          
+          if (!inString) {
+              if (line[j] === '/' && line[j+1] === '/') {
+                  inLineComment = true;
+                  newLine += '//';
+                  j += 2;
+                  continue;
+              }
+              if (line[j] === '/' && line[j+1] === '*') {
+                  inBlockComment = true;
+                  newLine += '/*';
+                  j += 2;
+                  continue;
+              }
+              if (line[j] === '(') parenCount++;
+              if (line[j] === ')') parenCount--;
+          }
+          
+          if (!inString && parenCount === 0) {
+              let match = line.substring(j).match(/^(?:COLOR)?RGB\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+              if (match) {
+                  const r = parseInt(match[1]).toString(16).padStart(2, '0').toUpperCase();
+                  const g = parseInt(match[2]).toString(16).padStart(2, '0').toUpperCase();
+                  const b = parseInt(match[3]).toString(16).padStart(2, '0').toUpperCase();
+                  newLine += `COLOR${b}${g}${r}`; // TonghuaShun uses BGR format for hex colors
+                  j += match[0].length;
+                  continue;
+              }
+          }
+          
+          newLine += line[j];
+          j++;
+      }
+      linesForColor[i] = newLine;
+  }
+  code = linesForColor.join('\n');
 
   return code;
 }

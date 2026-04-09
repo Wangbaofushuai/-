@@ -113,10 +113,11 @@ export default function App() {
               <ul className="space-y-2 text-sm text-slate-600">
                 <li><code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">HV/LV</code> 自动转为 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">HHV/LLV</code>，<code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">IFELSE/IFF</code> 转为 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">IF</code>。</li>
                 <li><code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">VALUEWHEN(条件, 数据)</code> 智能转为 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">REF(数据, BARSLAST(条件))</code>。</li>
+                <li><code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">TROUGH/PEAK(变量, L, R, 1)=变量</code> 这种文华特有的局部波谷/波峰检测，自动转为同花顺兼容的 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">REFX</code> 未来函数判断。</li>
                 <li><code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">CROSSUP/CROSSDOWN</code> 自动修正参数顺序。</li>
                 <li><code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">GETPRICE</code> 系列盘口函数转为同花顺 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">DYNAINFO</code>。</li>
                 <li>自动转换逻辑符：<code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">&amp;&amp;</code> ➔ <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">AND</code>，<code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">||</code> ➔ <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">OR</code>。</li>
-                <li>自动将 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">{`{ 注释 }`}</code> 转换为标准 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">{`// 注释`}</code>。</li>
+                <li>自动将 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">{`{ 注释 }`}</code> 转换为标准 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">{`/* 注释 */`}</code>，防止同行代码被误注释。</li>
               </ul>
             </div>
 
@@ -129,6 +130,8 @@ export default function App() {
               <ul className="space-y-2 text-sm text-slate-600">
                 <li><strong>图标映射：</strong> 自动将文华的图标编号映射为同花顺编号（如 1号笑脸 ➔ 7号笑脸）。</li>
                 <li><strong>柱体加粗：</strong> 自动放大 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">STICKLINE</code> 宽度，解决同花顺柱子过细问题。</li>
+                <li><strong>区间填充：</strong> <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">FILLRGN</code> 自动修正参数顺序以适配同花顺，<code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">DRAWBAND</code> 完美保留颜色参数。</li>
+                <li><strong>背景渐变：</strong> 自动将 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">DRAWGBK</code> 中的颜色参数用 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">STRIP</code> 函数包裹。</li>
                 <li><strong>分段画线：</strong> <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">DRAWCOLORLINE</code> 智能拆分为同花顺支持的 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">IF(..., DRAWNULL)</code> 语法。</li>
                 <li>自动去除 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">DRAWNUMBER</code> 多余精度参数，去除不支持的修饰符。</li>
                 <li>自动注释掉不支持的声音函数 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">SOUND</code> 和斜线函数 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">DRAWSL</code>。</li>
@@ -143,10 +146,11 @@ export default function App() {
               </h4>
               <ul className="space-y-2 text-sm text-slate-600">
                 <li>自动修复带有 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">%</code> 的非法变量名（如 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">占比%</code> ➔ <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">占比率</code>）。</li>
+                <li>自动修复以数字开头的非法变量名（如 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">0000X</code> ➔ <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">VAR_0000X</code>）。</li>
                 <li><code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">OPI</code> 转为 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">OPENVOL</code>，<code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">AVPRICE</code> 转为 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">SETTLE</code>。</li>
                 <li><code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">NULL</code> 常量转为 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">DRAWNULL</code>。</li>
                 <li>自动转换颜色常量，如 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">COLORRED</code> 转为 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">colorred</code>。</li>
-                <li>智能识别 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">RGB()</code>，若作为线条颜色修饰符，自动转为同花顺支持的十六进制颜色（如 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">COLOR3D3D3D</code>），防止图形被压缩成直线。</li>
+                <li>智能识别 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">RGB()</code>，若作为线条颜色修饰符，自动转为同花顺支持的十六进制颜色（如 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">COLOR3D3D3D</code>），防止图形被压缩成直线；若在 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">DRAWBAND</code> 等函数内部则完美保留。</li>
                 <li><code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">UNIT</code> 乘数统一替换为 <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded">1</code> 以保持趋势形态。</li>
               </ul>
             </div>
@@ -158,6 +162,13 @@ export default function App() {
                 常见手动微调指南
               </h4>
               <ul className="space-y-4 text-sm text-slate-700">
+                <li>
+                  <strong className="text-rose-700">指标完全不显示（一片空白）：</strong>
+                  <p className="mt-1.5 text-slate-600 text-xs leading-relaxed">
+                    在文华和同花顺中，<code className="bg-white border border-rose-100 text-rose-600 px-1 rounded">:=</code> 都代表“只计算，不画线”。如果你的代码里所有变量（比如 <code className="bg-white border border-rose-100 text-rose-600 px-1 rounded">RSI值:=...</code>）都用了 <code className="bg-white border border-rose-100 text-rose-600 px-1 rounded">:=</code>，那么主图/副图上就不会有任何线条。
+                    <br/><span className="font-medium text-rose-600 mt-1 inline-block">👉 解决方法：</span>找到你想展示的那个核心变量，把它的 <code className="bg-white border border-rose-100 text-rose-600 px-1 rounded">:=</code> 改成 <code className="bg-white border border-rose-100 text-rose-600 px-1 rounded">:</code>（去掉等号，例如 <code className="bg-white border border-rose-100 text-rose-600 px-1 rounded">RSI值:RSI1;</code>），线就会出来了！
+                  </p>
+                </li>
                 <li>
                   <strong className="text-rose-700">文字重叠问题（最常见）：</strong>
                   <p className="mt-1.5 text-slate-600 text-xs leading-relaxed">
